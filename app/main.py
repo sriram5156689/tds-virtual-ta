@@ -23,8 +23,9 @@ async def form_get(request: Request):
 @app.post("/", response_class=HTMLResponse)
 async def form_post(request: Request, question: str = Form(...)):
     chat_completion = client.chat.completions.create(
-        model="mixtral-8x7b-32768",  # or your chosen Groq model
-        messages=[
+    model="llama3-70b-8192",
+  
+     messages=[
             {"role": "system", "content": "You are a helpful teaching assistant."},
             {"role": "user", "content": question}
         ]
