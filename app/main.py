@@ -1,36 +1,33 @@
-import os
+from fastapi import FastAPI, Request, Form
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 import openai
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
+import os
+
+# Use Groq setup instead of OpenAI
+client = openai.OpenAI(
+    api_key=os.getenv("GROQ_API_KEY"),
+    base_url="https://api.groq.com/openai/v1"
+)
 
 app = FastAPI()
 
-# CORS for frontend access
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Optional: Static & Templates
+templates = Jinja2Templates(directory="templates")
 
-# Initialize Groq client
-client = openai.OpenAI(
-    api_key=os.getenv("GROQ_API_KEY"),
-    base_url="https://api.groq.com/openai/v1",  # 👈 Groq's base URL
-)
+@app.get("/", response_class=HTMLResponse)
+async def form_get(request: Request):
+    return templates.TemplateResponse("form.html", {"request": request, "result": ""})
 
-@app.post("/api/")
-async def answer_question(request: Request):
-    data = await request.json()
-    query = data.get("query", "")
-
+@app.post("/", response_class=HTMLResponse)
+async def form_post(request: Request, question: str = Form(...)):
     chat_completion = client.chat.completions.create(
-        model="llama3-70b-8192",  # ✅ Groq supports llama3, mixtral, gemma
+        model="mixtral-8x7b-32768",  # or your chosen Groq model
         messages=[
-            {"role": "system", "content": "You are a helpful TDS TA."},
-            {"role": "user", "content": query}
+            {"role": "system", "content": "You are a helpful teaching assistant."},
+            {"role": "user", "content": question}
         ]
     )
-
-    response_text = chat_completion.choices[0].message.content
-    return {"response": response_text}
+    result = chat_completion.choices[0].message.content
+    return templates.TemplateResponse("form.html", {"request": request, "result": result, "question": question})
